@@ -34,7 +34,16 @@ COZE_API_TOKEN = os.getenv("COZE_API_TOKEN", "")
 COZE_WEBHOOK_URL = os.getenv("COZE_WEBHOOK_URL", "https://kp2dz8j3vw.coze.site/feishu/webhook")
 
 app = FastAPI(title="飞书 Webhook 代理服务")
-
+@app.get("/feishu/webhook")
+async def feishu_url_verification(challenge: str = None):
+    """
+    处理飞书 URL 验证（GET 请求方式）
+    飞书有时会通过 GET 请求进行 URL 验证
+    """
+    if challenge:
+        logger.info(f"飞书 GET 验证，返回 challenge: {challenge}")
+        return {"challenge": challenge}
+    return {"status": "ok", "message": "Feishu webhook endpoint is ready"}
 
 @app.post("/feishu/webhook")
 async def proxy_feishu_webhook(request: Request):
@@ -111,14 +120,17 @@ if __name__ == "__main__":
         logger.warning("⚠️  COZE_API_TOKEN 未配置，请设置环境变量或在代码中填写")
         logger.warning("   示例: export COZE_API_TOKEN=ylh_your_token_here")
     
+    # 使用动态端口（Railway/Render等平台需要）
+    port = int(os.getenv("PORT", 8000))
+    
     logger.info(f"🚀 启动代理服务")
     logger.info(f"   目标地址: {COZE_WEBHOOK_URL}")
-    logger.info(f"   本地地址: http://localhost:8000/feishu/webhook")
+    logger.info(f"   监听端口: {port}")
     
-    # 启动服务
+    # 启动服务（生产环境关闭reload）
     uvicorn.run(
         "proxy_server:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True
+        port=port,
+        reload=False
     )
